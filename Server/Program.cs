@@ -12,12 +12,9 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            NATUPNPLib.UPnPNATClass _upnpTranslator = new NATUPNPLib.UPnPNATClass();
-            
-
             using (MulticastServer server = new MulticastServer(45000, "UDP", 45000, "My server"))
             {
-                while(true)
+                while (true)
                 {
                     server.SendMessage("some message");
                     System.Threading.Thread.Sleep(3000);
@@ -28,7 +25,7 @@ namespace Server
 
     class MulticastServer : IDisposable
     {
-        private readonly NATUPNPLib.UPnPNATClass _upnpTranslator = new NATUPNPLib.UPnPNATClass();
+        private readonly NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
         private readonly UdpClient udpSender;
 
         private readonly IPAddress localIpAddress;
@@ -46,9 +43,10 @@ namespace Server
             localIpAddress = GetLocalIpAddress();
             
             _upnpTranslator.StaticPortMappingCollection.Add(_externalPort, _protocol, _internalPort, localIpAddress.ToString(), true, applicationName);
-
-            IPEndPoint ipEndPoint = new IPEndPoint(localIpAddress, _internalPort);
-            udpSender = new UdpClient();
+            Console.WriteLine(localIpAddress.ToString());
+            //IPEndPoint ipEndPoint = new IPEndPoint(localIpAddress, _internalPort);
+            IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("239.192.100.2"), _internalPort);
+            udpSender = new UdpClient(ipEndPoint);
             udpSender.Connect(ipEndPoint);
         }
 
