@@ -12,7 +12,7 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            using (MulticastServer server = new MulticastServer(45000, "UDP", 45000, "My server"))
+            using (Server server = new Server(45000, "TCP", 45000, "My server"))
             {
                 while (true)
                 {
@@ -23,46 +23,41 @@ namespace Server
         }
     }
 
-    class MulticastServer : IDisposable
+    class Server : IDisposable
     {
         private readonly NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
-        private readonly UdpClient udpSender;
-
-        private readonly IPAddress localIpAddress;
+        private readonly TcpListener tcpListener;
 
         private readonly int _externalPort;
         private readonly int _internalPort;
         private readonly string _protocol;    
 
-        public MulticastServer(int externalPort, string protocol, int internalPort, string applicationName)
+        public Server(int externalPort, string protocol, int internalPort, string applicationName)
         {
             _externalPort = externalPort;
             _internalPort = internalPort;
             _protocol = protocol;
-
-            localIpAddress = GetLocalIpAddress();
             
-            _upnpTranslator.StaticPortMappingCollection.Add(_externalPort, _protocol, _internalPort, localIpAddress.ToString(), true, applicationName);
-            Console.WriteLine(localIpAddress.ToString());
-            //IPEndPoint ipEndPoint = new IPEndPoint(localIpAddress, _internalPort);
-            IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("239.192.100.2"), _internalPort);
-            udpSender = new UdpClient(ipEndPoint);
-            udpSender.Connect(ipEndPoint);
+            _upnpTranslator.StaticPortMappingCollection.Add(_externalPort, _protocol, _internalPort, GetLocalIpAddress(), true, applicationName);
+
+            tcpListener = new TcpListener(IPAddress.Any, 45000);
+
+             tcpListener.AcceptTcpClient()
         }
 
         public void SendMessage(string message)
         {
-            udpSender.Send(Encoding.UTF8.GetBytes(message), message.Length); //////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! pass full msg
+            tcpListener.Server.Send(Encoding.UTF8.GetBytes(message)); //////////////////////////////////////!!!!!!!!!!!
         }
 
-        private IPAddress GetLocalIpAddress()
+        private string GetLocalIpAddress()
         {
             IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
             foreach (IPAddress ipAddress in host.AddressList)
             {
                 if (ipAddress.AddressFamily == AddressFamily.InterNetwork)
                 {
-                    return ipAddress;
+                    return ipAddress.ToString();
                 }
             }
             throw new Exception("Local IP address was not found");
@@ -71,7 +66,7 @@ namespace Server
 
         void IDisposable.Dispose()
         {
-            udpSender.Close();
+            tcpListener.Stop();
             _upnpTranslator.StaticPortMappingCollection.Remove(_externalPort, _protocol);
         }
         
