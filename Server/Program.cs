@@ -12,14 +12,17 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            using (MulticastServer server = new MulticastServer(45000, "UDP", 45000, "My server"))
-            {
-                while (true)
-                {
-                    server.SendMessage("some message");
-                    System.Threading.Thread.Sleep(3000);
-                }
-            }
+            NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
+            _upnpTranslator.StaticPortMappingCollection.Remove(45000, "UDP");
+
+            //using (MulticastServer server = new MulticastServer(45000, "UDP", 45000, "My server"))
+            //{
+            //    while (true)
+            //    {
+            //        server.SendMessage("some message");
+            //        System.Threading.Thread.Sleep(3000);
+            //    }
+            //}
         }
     }
 
@@ -45,8 +48,13 @@ namespace Server
             _upnpTranslator.StaticPortMappingCollection.Add(_externalPort, _protocol, _internalPort, localIpAddress.ToString(), true, applicationName);
             Console.WriteLine(localIpAddress.ToString());
             //IPEndPoint ipEndPoint = new IPEndPoint(localIpAddress, _internalPort);
-            IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("239.192.100.2"), _internalPort);
-            udpSender = new UdpClient(ipEndPoint);
+            //IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("239.192.100.2"), _internalPort);
+            IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("31.43.129.211"), _internalPort);
+            udpSender = new UdpClient();
+
+            //udpSender.AllowNatTraversal(true);
+
+
             udpSender.Connect(ipEndPoint);
         }
 
