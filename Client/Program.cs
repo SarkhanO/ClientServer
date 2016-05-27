@@ -13,7 +13,8 @@ namespace Client
         static void Main(string[] args)
         {
             TcpClient tcpClient = new TcpClient();
-            tcpClient.Connect(IPAddress.Parse("127.0.0.1"), 45000);
+            Console.WriteLine("Enter ip address");
+            tcpClient.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
             byte[] msg = new byte[256];
 
             while(true)

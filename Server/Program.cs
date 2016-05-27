@@ -16,8 +16,7 @@ namespace Server
             {
                 while (true)
                 {
-                    server.SendMessage("some message");
-                    System.Threading.Thread.Sleep(3000);
+                    server.SendMessage(Console.ReadLine());
                 }
             }
         }
@@ -45,7 +44,7 @@ namespace Server
             _localPort = localPort;
             _protocol = protocol;
             
-            //_upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
+            _upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
 
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
             tcpListener.Start();
