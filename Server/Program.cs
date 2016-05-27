@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace Server
 {
@@ -25,29 +25,57 @@ namespace Server
 
     class Server : IDisposable
     {
+        private const int clientDisconectedCheckFrequency = 10000;
+
         private readonly NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
         private readonly TcpListener tcpListener;
 
-        private readonly int _externalPort;
-        private readonly int _internalPort;
+        private List<TcpClient> tcpClients;
+
+        private readonly int _maxClients;
+        private readonly int _routerPort;
+        private readonly int _localPort;
         private readonly string _protocol;    
 
-        public Server(int externalPort, string protocol, int internalPort, string applicationName)
+        public Server(int maxClients, int routerPort, string protocol, int localPort, string applicationName)
         {
-            _externalPort = externalPort;
-            _internalPort = internalPort;
+            _maxClients = maxClients;
+            _routerPort = routerPort;
+            _localPort = localPort;
             _protocol = protocol;
             
-            _upnpTranslator.StaticPortMappingCollection.Add(_externalPort, _protocol, _internalPort, GetLocalIpAddress(), true, applicationName);
+            _upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
 
-            tcpListener = new TcpListener(IPAddress.Any, 45000);
+            tcpListener = new TcpListener(IPAddress.Any, _localPort);
+            tcpListener.Start();
 
-             tcpListener.AcceptTcpClient()
+            //Accept clients
+            tcpClients = new List<TcpClient>();
+            new Thread(() =>
+            {
+                while(true)
+                {
+                    for (int i = 0; i < _maxClients; i++)
+                    {
+                        if (tcpClients[i] == null)
+                        {
+                            tcpClients.Add(tcpListener.AcceptTcpClient());
+                        }
+                        else if (!tcpClients[i].Connected)
+                        {
+                            tcpClients.RemoveAt(i);
+                        }
+                    }
+
+                    Thread.Sleep(clientDisconectedCheckFrequency);
+                }
+            }
+            ).Start();
         }
 
         public void SendMessage(string message)
         {
-            tcpListener.Server.Send(Encoding.UTF8.GetBytes(message)); //////////////////////////////////////!!!!!!!!!!!
+            
         }
 
         private string GetLocalIpAddress()
@@ -67,7 +95,7 @@ namespace Server
         void IDisposable.Dispose()
         {
             tcpListener.Stop();
-            _upnpTranslator.StaticPortMappingCollection.Remove(_externalPort, _protocol);
+            _upnpTranslator.StaticPortMappingCollection.Remove(_routerPort, _protocol);
         }
         
     }
