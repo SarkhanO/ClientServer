@@ -15,9 +15,20 @@ namespace Client
             TcpClient tcpClient = new TcpClient();
             tcpClient.Connect(IPAddress.Parse("127.0.0.1"), 45000);
             byte[] msg = new byte[256];
-            tcpClient.Client.Receive(msg);
-            Console.WriteLine(Encoding.UTF8.GetString(msg));
-            Console.Read();
+
+            while(true)
+            {
+                StringBuilder message = new StringBuilder();
+                int receivedBytes = 0;
+                do
+                {
+                    receivedBytes = tcpClient.Client.Receive(msg);
+                    message.Append(Encoding.UTF8.GetString(msg), 0, receivedBytes);
+                }
+                while (receivedBytes == 256);
+                Console.WriteLine(message.ToString());
+                Console.WriteLine();
+            }
         }
     }
 }
