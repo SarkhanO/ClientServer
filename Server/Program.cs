@@ -31,6 +31,7 @@ namespace Server
         private readonly TcpListener tcpListener;
 
         private readonly List<TcpClient> tcpClients;
+        private readonly Stack<string> receivedMessages;///////////////////////////////////////////
         
         private readonly int _maxClients;
         private readonly int _routerPort;
@@ -49,8 +50,7 @@ namespace Server
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
             tcpListener.Start();
 
-            //Accept clients
-            ThreadPool.SetMaxThreads(_maxClients, _maxClients);
+            //Accept clients            
             tcpClients = new List<TcpClient>();
             new Thread(() =>
             {
@@ -81,10 +81,10 @@ namespace Server
         {
             foreach(TcpClient client in tcpClients)
             {
-                ThreadPool.QueueUserWorkItem((obj) => 
+                new Thread(() =>
                 {
                     client.Client.Send(Encoding.UTF8.GetBytes(message));
-                });
+                }).Start();
             }
         }
 
