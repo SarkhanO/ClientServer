@@ -56,11 +56,7 @@ namespace Server
             {
                 while(true)
                 {
-                    if (tcpClients.Count < _maxClients)
-                    {
-                        tcpClients.Add(tcpListener.AcceptTcpClient());
-                    }
-
+                    //at first check for disconnected clients
                     tcpClients.ForEach((client) =>
                     {
                         if (!client.Connected)
@@ -68,6 +64,13 @@ namespace Server
                             tcpClients.Remove(client);
                         }
                     });
+
+                    //then accept clients if possible
+                    if (tcpClients.Count < _maxClients)
+                    {
+                        tcpClients.Add(tcpListener.AcceptTcpClient());
+                    }
+
                     Thread.Sleep(clientDisconectedCheckFrequency);
                 }
             }
@@ -82,6 +85,14 @@ namespace Server
                 {
                     client.Client.Send(Encoding.UTF8.GetBytes(message));
                 });
+            }
+        }
+
+        public void ReceiveMessage()
+        {
+            foreach(TcpClient client in tcpClients)
+            {
+                
             }
         }
 

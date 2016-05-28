@@ -17,7 +17,7 @@ namespace Client
             tcpClient.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
             byte[] msg = new byte[256];
 
-            while(true)
+            while (true)
             {
                 StringBuilder message = new StringBuilder();
                 int receivedBytes = 0;
@@ -30,6 +30,11 @@ namespace Client
                 Console.WriteLine(message.ToString());
                 Console.WriteLine();
             }
+        }
+
+        class Client
+        {
+
         }
     }
 }
