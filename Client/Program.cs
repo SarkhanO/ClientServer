@@ -13,29 +13,59 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            TcpClient tcpClient = new TcpClient();
+            TcpClient client = new TcpClient();
             Console.WriteLine("Enter ip address");
-            tcpClient.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
-            byte[] msg = new byte[256];
+            client.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
 
-            while (true)
+            int messageBufferSize = 256;
+
+            new Thread(() =>
             {
-                StringBuilder message = new StringBuilder();
-                int receivedBytes = 0;
-                do
+                byte[] messageBuffer = new byte[messageBufferSize];
+
+                while (true)
                 {
-                    receivedBytes = tcpClient.Client.Receive(msg);
-                    message.Append(Encoding.UTF8.GetString(msg), 0, receivedBytes);
+                    StringBuilder message = new StringBuilder();
+                    int receivedBytes = 0;
+                    do
+                    {
+                        receivedBytes = client.Client.Receive(messageBuffer);
+                        message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
+                    }
+                    while (receivedBytes == messageBufferSize);
+                    Console.WriteLine(message.ToString());
                 }
-                while (receivedBytes == 256);
-                Console.WriteLine(message.ToString());
-                Console.WriteLine();
-                }
+            }).Start();
+            
+
+            while(true)
+            {
+                client.Client.Send(Encoding.UTF8.GetBytes(Console.ReadLine()));
+            }
+
+            //TcpClient tcpClient = new TcpClient();
+            //Console.WriteLine("Enter ip address");
+            //tcpClient.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
+            //byte[] msg = new byte[256];
+
+            //while (true)
+            //{
+            //    StringBuilder message = new StringBuilder();
+            //    int receivedBytes = 0;
+            //    do
+            //    {
+            //        receivedBytes = tcpClient.Client.Receive(msg);
+            //        message.Append(Encoding.UTF8.GetString(msg), 0, receivedBytes);
+            //    }
+            //    while (receivedBytes == 256);
+            //    Console.WriteLine(message.ToString());
+            //    Console.WriteLine();
+            //    }
             }
 
         class Client
         {
-
+            private readonly TcpClient tcpClient;
         }
     }
 }

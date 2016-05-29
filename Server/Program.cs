@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -39,7 +40,7 @@ namespace Server
         private readonly TcpListener tcpListener;
 
         private readonly List<TcpClient> tcpClients = new List<TcpClient>();
-        private readonly Stack<string> receivedMessages = new Stack<string>();
+        private readonly BlockingCollection<string> receivedMessages = new BlockingCollection<string>();
         
         private readonly int _maxClients;
         private readonly int _routerPort;
@@ -94,7 +95,7 @@ namespace Server
 
         public string GetNextCleintMessage()
         {
-            return receivedMessages.Pop();
+            return receivedMessages.Take();
         }
 
         private void HandleClient(TcpClient client)
@@ -110,8 +111,8 @@ namespace Server
                     receivedBytes = client.Client.Receive(messageBuffer);
                     message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
                 }
-                while (receivedBytes == messageBufferSize);
-                receivedMessages.Push(message.ToString());
+                while (receivedBytes == messageBufferSize);                
+                receivedMessages.Add(message.ToString());
 
                 //Redirect received message to other clients
                 SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
