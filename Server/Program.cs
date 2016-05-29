@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Server
 {
@@ -14,7 +15,14 @@ namespace Server
         {
             using (Server server = new Server(8, 45000, "TCP", 45000, "My server"))
             {
-                while (true)
+                new Thread(() =>
+                {
+                    while(true)
+                    {
+                        Console.WriteLine(server.GetNextCleintMessage());
+                    }
+                }).Start();
+                while(true)
                 {
                     server.SendMessage(Console.ReadLine());
                 }
@@ -50,13 +58,29 @@ namespace Server
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
             tcpListener.Start();
 
+
             //Accept clients
-            ThreadPool.SetMaxThreads(_maxClients, _maxClients);
             new Thread(() =>
             {
-                AcceptClientsReceiveMessages();
-            }
-            ).Start();
+                while(true)
+                {
+                    if (tcpClients.Count < _maxClients)
+                    {
+                        TcpClient client = tcpListener.AcceptTcpClient();
+                        tcpClients.Add(client);
+
+                        new Thread(() =>
+                        {
+                            HandleClient(client);
+
+                        }).Start();
+                    }
+                    else
+                    {
+                        Thread.Sleep(clientDisconectedCheckFrequency);
+                    }
+                }
+            }).Start();            
         }
 
         /// <summary>
@@ -73,43 +97,28 @@ namespace Server
             return receivedMessages.Pop();
         }
 
-        private void AcceptClientsReceiveMessages()
+        private void HandleClient(TcpClient client)
         {
-            while(true)
+            byte[] messageBuffer = new byte[messageBufferSize];
+
+            while (client.Connected)
             {
-                if (tcpClients.Count < _maxClients)
+                StringBuilder message = new StringBuilder();
+                int receivedBytes = 0;
+                do
                 {
-                    ThreadPool.QueueUserWorkItem((o) =>
-                    {
-                        Console.WriteLine("Thread started");
-                        TcpClient client = tcpListener.AcceptTcpClient();
-                        tcpClients.Add(client);
-                        byte[] messageBuffer = new byte[messageBufferSize];
-
-                        while (client.Connected)
-                        {
-                            StringBuilder message = new StringBuilder();
-                            int receivedBytes = 0;
-                            do
-                            {
-                                receivedBytes = client.Client.Receive(messageBuffer);
-                                message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
-                            }
-                            while (receivedBytes == messageBufferSize);
-                            receivedMessages.Push(message.ToString());
-
-                            //Redirect received message to other clients
-                            SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
-                        }
-                        client.Close();
-                        tcpClients.Remove(client);
-                    });
+                    receivedBytes = client.Client.Receive(messageBuffer);
+                    message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
                 }
-                else
-                {
-                    Thread.Sleep(clientDisconectedCheckFrequency);
-                }
+                while (receivedBytes == messageBufferSize);
+                receivedMessages.Push(message.ToString());
+
+                //Redirect received message to other clients
+                SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
             }
+
+            client.Close();
+            tcpClients.Remove(client);
         }
 
         /// <summary>
@@ -143,6 +152,7 @@ namespace Server
         
         void IDisposable.Dispose()
         {
+            tcpClients.ForEach(client => client.Close());
             tcpListener.Stop();
             //_upnpTranslator.StaticPortMappingCollection.Remove(_routerPort, _protocol);
         }
