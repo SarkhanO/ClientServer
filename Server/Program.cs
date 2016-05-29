@@ -101,23 +101,31 @@ namespace Server
         private void HandleClient(TcpClient client)
         {
             byte[] messageBuffer = new byte[messageBufferSize];
-
-            while (client.Connected)
+            using (NetworkStream stream = client.GetStream())
             {
-                StringBuilder message = new StringBuilder();
-                int receivedBytes = 0;
-                do
+                while (client.Connected)
                 {
-                    receivedBytes = client.Client.Receive(messageBuffer);
-                    message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
+                    StringBuilder message = new StringBuilder();
+                    int receivedBytes = 0;
+                    do
+                    {
+                        
+                        receivedBytes = stream.Read(messageBuffer, 0, messageBufferSize);//////////////////////////////////////////////////////////////////////
+                        
+
+                        //SocketError socketError;
+                        //receivedBytes = client.Client.Receive(messageBuffer, 0, messageBufferSize, SocketFlags.);
+
+                        message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
+                    }
+                    while (receivedBytes == messageBufferSize);
+                    receivedMessages.Add(message.ToString());
+
+                    //Redirect received message to other clients
+                    SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
                 }
-                while (receivedBytes == messageBufferSize);                
-                receivedMessages.Add(message.ToString());
-
-                //Redirect received message to other clients
-                SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
             }
-
+            
             client.Close();
             tcpClients.Remove(client);
         }
