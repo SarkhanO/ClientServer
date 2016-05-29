@@ -18,11 +18,6 @@ namespace Server
                 {
                     server.SendMessage(Console.ReadLine());
                 }
-                while(true)
-                {
-                    server.ReceiveMessage();
-                    server.receivedMessages.Get();
-                }
             }
         }
     }
@@ -50,7 +45,7 @@ namespace Server
             _localPort = localPort;
             _protocol = protocol;
             
-            _upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
+            //_upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
 
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
             tcpListener.Start();
@@ -59,46 +54,26 @@ namespace Server
             tcpClients = new List<TcpClient>();
             new Thread(() =>
             {
-                while(true)
-                {
-                    //at first check for disconnected clients
-                    tcpClients.ForEach((client) =>
-                    {
-                        if (!client.Connected)
-                        {
-                            tcpClients.Remove(client);
-                        }
-                    });
-
-                    //then accept clients if possible
-                    if (tcpClients.Count < _maxClients)
-                    {
-                        tcpClients.Add(tcpListener.AcceptTcpClient());
-                    }
-
-                    Thread.Sleep(clientDisconectedCheckFrequency);
-                }
+                AcceptClientsReceiveMessages();
             }
             ).Start();
         }
 
+        /// <summary>
+        /// Sends message to all clients
+        /// </summary>
+        /// <param name="message">Message to send</param>
         public void SendMessage(string message)
         {
-            foreach(TcpClient client in tcpClients)
-            {
-                new Thread(() =>
-                {
-                    client.Client.Send(Encoding.UTF8.GetBytes(message));
-                }).Start();
-            }
+            SendMessage(tcpClients, message);
         }
 
-        public string GetNextMessage()
+        public string GetNextCleintMessage()
         {
             return receivedMessages.Pop();
         }
 
-        private void ReceiveMessages()
+        private void AcceptClientsReceiveMessages()
         {
             while(true)
             {
@@ -108,10 +83,23 @@ namespace Server
                     {
                         TcpClient client = tcpListener.AcceptTcpClient();
                         tcpClients.Add(client);
+                        byte[] messageBuffer = new byte[messageBufferSize];
+
                         while (client.Connected)
                         {
-                            client.ReceiveMeaasge();
+                            StringBuilder message = new StringBuilder();
+                            int receivedBytes = 0;
+                            do
+                            {
+                                receivedBytes = client.Client.Receive(messageBuffer);
+                                message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
+                            }
+                            while (receivedBytes == messageBufferSize);
+                            receivedMessages.Push(message.ToString());
+                            //Send received message to other clients
+                            SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
                         }
+                        client.Close();
                         tcpClients.Remove(client);
                     }).Start();
                 }
@@ -120,25 +108,22 @@ namespace Server
                     Thread.Sleep(clientDisconectedCheckFrequency);
                 }
             }
+        }
 
-            //foreach (TcpClient client in tcpClients)
-            //{
-            //    new Thread(() =>
-            //    {
-            //        while(client.Connected)
-            //        {
-            //            StringBuilder message = new StringBuilder();
-            //            int receivedBytes = 0;
-            //            do
-            //            {
-            //                receivedBytes = client.Client.Receive(msg);
-            //                message.Append(Encoding.UTF8.GetString(msg), 0, receivedBytes);
-            //            }
-            //            while (receivedBytes == 256);
-            //            receivedMessages.Push(message.ToString());
-            //        }
-            //    }).Start();
-            //}
+        /// <summary>
+        /// Sends message to specific clients
+        /// </summary>
+        /// <param name="clients">List of clients to send a message</param>
+        /// <param name="message">Message to send</param>
+        private void SendMessage(IEnumerable<TcpClient> clients, string message)
+        {
+            foreach (TcpClient client in tcpClients)
+            {
+                new Thread(() =>
+                {
+                    client.Client.Send(Encoding.UTF8.GetBytes(message));
+                }).Start();
+            }
         }
 
         private string GetLocalIpAddress()
@@ -153,8 +138,7 @@ namespace Server
             }
             throw new Exception("Local IP address was not found");
         }
-
-
+        
         void IDisposable.Dispose()
         {
             tcpListener.Stop();
