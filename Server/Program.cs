@@ -30,8 +30,8 @@ namespace Server
         private readonly NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
         private readonly TcpListener tcpListener;
 
-        private readonly List<TcpClient> tcpClients;
-        private readonly Stack<string> receivedMessages;
+        private readonly List<TcpClient> tcpClients = new List<TcpClient>();
+        private readonly Stack<string> receivedMessages = new Stack<string>();
         
         private readonly int _maxClients;
         private readonly int _routerPort;
@@ -50,8 +50,8 @@ namespace Server
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
             tcpListener.Start();
 
-            //Accept clients            
-            tcpClients = new List<TcpClient>();
+            //Accept clients
+            ThreadPool.SetMaxThreads(_maxClients, _maxClients);
             new Thread(() =>
             {
                 AcceptClientsReceiveMessages();
@@ -79,8 +79,9 @@ namespace Server
             {
                 if (tcpClients.Count < _maxClients)
                 {
-                    new Thread(() =>
+                    ThreadPool.QueueUserWorkItem((o) =>
                     {
+                        Console.WriteLine("Thread started");
                         TcpClient client = tcpListener.AcceptTcpClient();
                         tcpClients.Add(client);
                         byte[] messageBuffer = new byte[messageBufferSize];
@@ -96,12 +97,13 @@ namespace Server
                             }
                             while (receivedBytes == messageBufferSize);
                             receivedMessages.Push(message.ToString());
+
                             //Redirect received message to other clients
                             SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
                         }
                         client.Close();
                         tcpClients.Remove(client);
-                    }).Start();
+                    });
                 }
                 else
                 {
