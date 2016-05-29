@@ -96,7 +96,7 @@ namespace Server
                             }
                             while (receivedBytes == messageBufferSize);
                             receivedMessages.Push(message.ToString());
-                            //Send received message to other clients
+                            //Redirect received message to other clients
                             SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
                         }
                         client.Close();
