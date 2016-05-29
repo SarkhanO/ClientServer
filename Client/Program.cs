@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Client
@@ -12,28 +13,29 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            //Console.WriteLine("Enter IP address");
-            //IPAddress serverIpAddress = IPAddress.Parse(Console.ReadLine());
-            //IPAddress serverIpAddress = IPAddress.Parse("239.192.100.2");
-            ///IPEndPoint serverIpEndPoint = new IPEndPoint(serverIpAddress, 45000);
-            //UdpClient client = new UdpClient(new IPEndPoint(IPAddress.Parse("192.168.1.102"), 45001));
-            UdpClient client = new UdpClient(45000);
+            TcpClient tcpClient = new TcpClient();
+            Console.WriteLine("Enter ip address");
+            tcpClient.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
+            byte[] msg = new byte[256];
 
-            client.AllowNatTraversal(true);
-            //client.Connect(serverIpEndPoint);
+            while (true)
+            {
+                StringBuilder message = new StringBuilder();
+                int receivedBytes = 0;
+                do
+                {
+                    receivedBytes = tcpClient.Client.Receive(msg);
+                    message.Append(Encoding.UTF8.GetString(msg), 0, receivedBytes);
+                }
+                while (receivedBytes == 256);
+                Console.WriteLine(message.ToString());
+                Console.WriteLine();
+                }
+            }
 
-            //UdpClient client = new UdpClient();
+        class Client
+        {
 
-            //IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("10.0.0.54"), 45000);
-            IPEndPoint serverIpAddress = new IPEndPoint(IPAddress.Parse("31.43.129.211"), 45000);
-
-            client.JoinMulticastGroup(IPAddress.Parse("31.43.129.211"));
-
-            client.Connect(serverIpAddress);
-
-            IPEndPoint senderIpEndPoint = null;
-            Console.WriteLine(Encoding.UTF8.GetString(client.Receive(ref senderIpEndPoint)));
-            Console.Read();
         }
     }
 }

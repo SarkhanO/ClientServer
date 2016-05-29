@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace Server
 {
@@ -12,75 +12,139 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
-            _upnpTranslator.StaticPortMappingCollection.Remove(45000, "UDP");
-
-            //using (MulticastServer server = new MulticastServer(45000, "UDP", 45000, "My server"))
-            //{
-            //    while (true)
-            //    {
-            //        server.SendMessage("some message");
-            //        System.Threading.Thread.Sleep(3000);
-            //    }
-            //}
+            using (Server server = new Server(8, 45000, "TCP", 45000, "My server"))
+            {
+                while (true)
+                {
+                    server.SendMessage(Console.ReadLine());
+                }
+            }
         }
     }
 
-    class MulticastServer : IDisposable
+    class Server : IDisposable
     {
+        private const int clientDisconectedCheckFrequency = 10000;
+        private const int messageBufferSize = 256;
+
         private readonly NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
-        private readonly UdpClient udpSender;
+        private readonly TcpListener tcpListener;
 
-        private readonly IPAddress localIpAddress;
-
-        private readonly int _externalPort;
-        private readonly int _internalPort;
+        private readonly List<TcpClient> tcpClients = new List<TcpClient>();
+        private readonly Stack<string> receivedMessages = new Stack<string>();
+        
+        private readonly int _maxClients;
+        private readonly int _routerPort;
+        private readonly int _localPort;
         private readonly string _protocol;    
 
-        public MulticastServer(int externalPort, string protocol, int internalPort, string applicationName)
+        public Server(int maxClients, int routerPort, string protocol, int localPort, string applicationName)
         {
-            _externalPort = externalPort;
-            _internalPort = internalPort;
+            _maxClients = maxClients;
+            _routerPort = routerPort;
+            _localPort = localPort;
             _protocol = protocol;
-
-            localIpAddress = GetLocalIpAddress();
             
-            _upnpTranslator.StaticPortMappingCollection.Add(_externalPort, _protocol, _internalPort, localIpAddress.ToString(), true, applicationName);
-            Console.WriteLine(localIpAddress.ToString());
-            //IPEndPoint ipEndPoint = new IPEndPoint(localIpAddress, _internalPort);
-            //IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("239.192.100.2"), _internalPort);
-            IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse("31.43.129.211"), _internalPort);
-            udpSender = new UdpClient();
+            //_upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
 
-            //udpSender.AllowNatTraversal(true);
+            tcpListener = new TcpListener(IPAddress.Any, _localPort);
+            tcpListener.Start();
 
-
-            udpSender.Connect(ipEndPoint);
+            //Accept clients
+            ThreadPool.SetMaxThreads(_maxClients, _maxClients);
+            new Thread(() =>
+            {
+                AcceptClientsReceiveMessages();
+            }
+            ).Start();
         }
 
+        /// <summary>
+        /// Sends message to all clients
+        /// </summary>
+        /// <param name="message">Message to send</param>
         public void SendMessage(string message)
         {
-            udpSender.Send(Encoding.UTF8.GetBytes(message), message.Length); //////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! pass full msg
+            SendMessage(tcpClients, message);
         }
 
-        private IPAddress GetLocalIpAddress()
+        public string GetNextCleintMessage()
+        {
+            return receivedMessages.Pop();
+        }
+
+        private void AcceptClientsReceiveMessages()
+        {
+            while(true)
+            {
+                if (tcpClients.Count < _maxClients)
+                {
+                    ThreadPool.QueueUserWorkItem((o) =>
+                    {
+                        Console.WriteLine("Thread started");
+                        TcpClient client = tcpListener.AcceptTcpClient();
+                        tcpClients.Add(client);
+                        byte[] messageBuffer = new byte[messageBufferSize];
+
+                        while (client.Connected)
+                        {
+                            StringBuilder message = new StringBuilder();
+                            int receivedBytes = 0;
+                            do
+                            {
+                                receivedBytes = client.Client.Receive(messageBuffer);
+                                message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
+                            }
+                            while (receivedBytes == messageBufferSize);
+                            receivedMessages.Push(message.ToString());
+
+                            //Redirect received message to other clients
+                            SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
+                        }
+                        client.Close();
+                        tcpClients.Remove(client);
+                    });
+                }
+                else
+                {
+                    Thread.Sleep(clientDisconectedCheckFrequency);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sends message to specific clients
+        /// </summary>
+        /// <param name="clients">List of clients to send a message</param>
+        /// <param name="message">Message to send</param>
+        private void SendMessage(IEnumerable<TcpClient> clients, string message)
+        {
+            foreach (TcpClient client in tcpClients)
+            {
+                new Thread(() =>
+                {
+                    client.Client.Send(Encoding.UTF8.GetBytes(message));
+                }).Start();
+            }
+        }
+
+        private string GetLocalIpAddress()
         {
             IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
             foreach (IPAddress ipAddress in host.AddressList)
             {
                 if (ipAddress.AddressFamily == AddressFamily.InterNetwork)
                 {
-                    return ipAddress;
+                    return ipAddress.ToString();
                 }
             }
             throw new Exception("Local IP address was not found");
         }
-
-
+        
         void IDisposable.Dispose()
         {
-            udpSender.Close();
-            _upnpTranslator.StaticPortMappingCollection.Remove(_externalPort, _protocol);
+            tcpListener.Stop();
+            //_upnpTranslator.StaticPortMappingCollection.Remove(_routerPort, _protocol);
         }
         
     }
