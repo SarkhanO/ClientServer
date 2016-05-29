@@ -18,6 +18,11 @@ namespace Server
                 {
                     server.SendMessage(Console.ReadLine());
                 }
+                while(true)
+                {
+                    server.ReceiveMessage();
+                    server.receivedMessages.Get();
+                }
             }
         }
     }
@@ -31,7 +36,7 @@ namespace Server
         private readonly TcpListener tcpListener;
 
         private readonly List<TcpClient> tcpClients;
-        private readonly Stack<string> receivedMessages;///////////////////////////////////////////
+        private readonly Stack<string> receivedMessages;
         
         private readonly int _maxClients;
         private readonly int _routerPort;
@@ -88,12 +93,52 @@ namespace Server
             }
         }
 
-        public void ReceiveMessage()
+        public string GetNextMessage()
         {
-            foreach(TcpClient client in tcpClients)
+            return receivedMessages.Pop();
+        }
+
+        private void ReceiveMessages()
+        {
+            while(true)
             {
-                
+                if (tcpClients.Count < _maxClients)
+                {
+                    new Thread(() =>
+                    {
+                        TcpClient client = tcpListener.AcceptTcpClient();
+                        tcpClients.Add(client);
+                        while (client.Connected)
+                        {
+                            client.ReceiveMeaasge();
+                        }
+                        tcpClients.Remove(client);
+                    }).Start();
+                }
+                else
+                {
+                    Thread.Sleep(clientDisconectedCheckFrequency);
+                }
             }
+
+            //foreach (TcpClient client in tcpClients)
+            //{
+            //    new Thread(() =>
+            //    {
+            //        while(client.Connected)
+            //        {
+            //            StringBuilder message = new StringBuilder();
+            //            int receivedBytes = 0;
+            //            do
+            //            {
+            //                receivedBytes = client.Client.Receive(msg);
+            //                message.Append(Encoding.UTF8.GetString(msg), 0, receivedBytes);
+            //            }
+            //            while (receivedBytes == 256);
+            //            receivedMessages.Push(message.ToString());
+            //        }
+            //    }).Start();
+            //}
         }
 
         private string GetLocalIpAddress()
