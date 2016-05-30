@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -100,34 +101,52 @@ namespace Server
 
         private void HandleClient(TcpClient client)
         {
-            byte[] messageBuffer = new byte[messageBufferSize];
-            using (NetworkStream stream = client.GetStream())
-            {
-                while (client.Connected)
-                {
-                    StringBuilder message = new StringBuilder();
-                    int receivedBytes = 0;
-                    do
-                    {
-                        
-                        receivedBytes = stream.Read(messageBuffer, 0, messageBufferSize);//////////////////////////////////////////////////////////////////////
-                        
-
-                        //SocketError socketError;
-                        //receivedBytes = client.Client.Receive(messageBuffer, 0, messageBufferSize, SocketFlags.);
-
-                        message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
-                    }
-                    while (receivedBytes == messageBufferSize);
-                    receivedMessages.Add(message.ToString());
-
-                    //Redirect received message to other clients
-                    SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
-                }
-            }
             
-            client.Close();
-            tcpClients.Remove(client);
+            try
+            {
+                AcceptMessagesFromClient(client);
+            }
+            catch(IOException)
+            {
+
+            }
+            finally
+            {
+                client.Close();
+                tcpClients.Remove(client);
+            }
+        }
+
+        private void AcceptMessagesFromClient(TcpClient client)
+        {  
+            try
+            {
+                using (NetworkStream stream = client.GetStream())
+                {
+                    byte[] messageBuffer = new byte[messageBufferSize];
+
+                    while (client.Connected)
+                    {
+                        StringBuilder message = new StringBuilder();
+                        int receivedBytes = 0;
+                        do
+                        {
+                            receivedBytes = stream.Read(messageBuffer, 0, messageBufferSize);
+                            message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
+                        }
+                        while (receivedBytes == messageBufferSize);
+
+                        receivedMessages.Add(message.ToString());
+
+                        //Redirect received message to other clients
+                        SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
+                    }
+                }
+            }          
+            catch(InvalidOperationException)
+            {
+                throw new 
+            }
         }
 
         /// <summary>
