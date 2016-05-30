@@ -55,7 +55,7 @@ namespace Server
             _localPort = localPort;
             _protocol = protocol;
             
-            //_upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
+            _upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
 
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
             tcpListener.Start();
@@ -193,7 +193,7 @@ namespace Server
         {
             tcpClients.ForEach(client => client.Close());
             tcpListener.Stop();
-            //_upnpTranslator.StaticPortMappingCollection.Remove(_routerPort, _protocol);
+            _upnpTranslator.StaticPortMappingCollection.Remove(_routerPort, _protocol);
         }
         
     }

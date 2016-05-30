@@ -38,10 +38,10 @@ namespace Client
             }).Start();
 
 
-            //while(true)
-            //{
-            //    client.Client.Send(Encoding.UTF8.GetBytes(Console.ReadLine()));
-            //}
+            while (true)
+            {
+                client.Client.Send(Encoding.UTF8.GetBytes(Console.ReadLine()));
+            }
 
         }
     }
