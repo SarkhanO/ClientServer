@@ -42,11 +42,11 @@ namespace Server
 
         private readonly List<TcpClient> tcpClients = new List<TcpClient>();
         private readonly BlockingCollection<string> receivedMessages = new BlockingCollection<string>();
-        
+
         private readonly int _maxClients;
         private readonly int _routerPort;
         private readonly int _localPort;
-        private readonly string _protocol;    
+        private readonly string _protocol;        
 
         public Server(int maxClients, int routerPort, string protocol, int localPort, string applicationName)
         {
@@ -101,14 +101,16 @@ namespace Server
 
         private void HandleClient(TcpClient client)
         {
-            
             try
             {
-                AcceptMessagesFromClient(client);
+                ReceiveMessagesFromClient(client);
             }
-            catch(IOException)
+            catch(ClientDisconnectedException) //ignore exception
             {
-
+            }
+            catch (Exception ex)
+            {
+                //write to log
             }
             finally
             {
@@ -117,7 +119,7 @@ namespace Server
             }
         }
 
-        private void AcceptMessagesFromClient(TcpClient client)
+        private void ReceiveMessagesFromClient(TcpClient client)
         {  
             try
             {
@@ -136,17 +138,26 @@ namespace Server
                         }
                         while (receivedBytes == messageBufferSize);
 
-                        receivedMessages.Add(message.ToString());
-
-                        //Redirect received message to other clients
-                        SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
+                        AcceptClientMessage(client, message.ToString());
                     }
                 }
             }          
             catch(InvalidOperationException)
             {
-                throw new 
+                throw new ClientDisconnectedException();
             }
+            catch(IOException)
+            {
+                throw new ClientDisconnectedException();
+            }
+        }
+
+        private void AcceptClientMessage(TcpClient client, string message)
+        {
+            receivedMessages.Add(message.ToString());
+
+            //Redirect received message to other clients
+            SendMessage(tcpClients.Except(new List<TcpClient> { client }), message.ToString());
         }
 
         /// <summary>

@@ -36,36 +36,13 @@ namespace Client
                     Console.WriteLine(message.ToString());
                 }
             }).Start();
-            
 
-            while(true)
-            {
-                client.Client.Send(Encoding.UTF8.GetBytes(Console.ReadLine()));
-            }
 
-            //TcpClient tcpClient = new TcpClient();
-            //Console.WriteLine("Enter ip address");
-            //tcpClient.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
-            //byte[] msg = new byte[256];
-
-            //while (true)
+            //while(true)
             //{
-            //    StringBuilder message = new StringBuilder();
-            //    int receivedBytes = 0;
-            //    do
-            //    {
-            //        receivedBytes = tcpClient.Client.Receive(msg);
-            //        message.Append(Encoding.UTF8.GetString(msg), 0, receivedBytes);
-            //    }
-            //    while (receivedBytes == 256);
-            //    Console.WriteLine(message.ToString());
-            //    Console.WriteLine();
-            //    }
-            }
+            //    client.Client.Send(Encoding.UTF8.GetBytes(Console.ReadLine()));
+            //}
 
-        class Client
-        {
-            private readonly TcpClient tcpClient;
         }
     }
 }
