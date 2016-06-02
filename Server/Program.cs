@@ -37,7 +37,7 @@ namespace Server
         private const int clientDisconectedCheckFrequency = 10000;
         private const int messageBufferSize = 256;
 
-        private readonly NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
+        //private readonly NATUPNPLib.UPnPNAT _upnpTranslator = new NATUPNPLib.UPnPNAT();
         private readonly TcpListener tcpListener;
 
         private readonly List<TcpClient> tcpClients = new List<TcpClient>();
@@ -55,7 +55,7 @@ namespace Server
             _localPort = localPort;
             _protocol = protocol;
             
-            _upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
+            //_upnpTranslator.StaticPortMappingCollection.Add(_routerPort, _protocol, _localPort, GetLocalIpAddress(), true, applicationName);
 
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
             tcpListener.Start();
@@ -82,7 +82,7 @@ namespace Server
                         Thread.Sleep(clientDisconectedCheckFrequency);
                     }
                 }
-            }).Start();            
+            }).Start();
         }
 
         /// <summary>
@@ -142,17 +142,17 @@ namespace Server
                     }
                 }
             }          
-            catch(InvalidOperationException)
+            catch(InvalidOperationException) //client disconnected at the stage of getting stream
             {
                 throw new ClientDisconnectedException();
             }
-            catch(IOException)
+            catch(IOException)//client disconnected while server waiting for data
             {
                 throw new ClientDisconnectedException();
             }
         }
 
-        private void AcceptClientMessage(TcpClient client, string message)
+        private void AcceptClientMessage(TcpClient client, string message) //rename ( catch(ClientDisconnectedException) //ignore exception )
         {
             receivedMessages.Add(message.ToString());
 
@@ -165,9 +165,9 @@ namespace Server
         /// </summary>
         /// <param name="clients">List of clients to send a message</param>
         /// <param name="message">Message to send</param>
-        private void SendMessage(IEnumerable<TcpClient> clients, string message)
+        private void SendMessage(IEnumerable<TcpClient> clients, string message) 
         {
-            foreach (TcpClient client in tcpClients)
+            foreach (TcpClient client in clients)//Parallel foreach!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             {
                 new Thread(() =>
                 {
@@ -193,7 +193,7 @@ namespace Server
         {
             tcpClients.ForEach(client => client.Close());
             tcpListener.Stop();
-            _upnpTranslator.StaticPortMappingCollection.Remove(_routerPort, _protocol);
+            //_upnpTranslator.StaticPortMappingCollection.Remove(_routerPort, _protocol);
         }
         
     }
