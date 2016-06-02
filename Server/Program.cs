@@ -119,6 +119,11 @@ namespace Server
             }
         }
 
+        private void ReceiveMessage(TcpClient client)
+        {
+            client.Available
+        }
+
         private void ReceiveMessagesFromClient(TcpClient client)
         {  
             try
@@ -127,7 +132,7 @@ namespace Server
                 {
                     byte[] messageBuffer = new byte[messageBufferSize];
 
-                    while (client.Connected)
+                    while (true) //NOT client.Connected
                     {
                         StringBuilder message = new StringBuilder();
                         int receivedBytes = 0;
