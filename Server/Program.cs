@@ -114,16 +114,10 @@ namespace Server
             }
             finally
             {
-                client.Close();
-                tcpClients.Remove(client);
+                DisconnectClient(client);
             }
         }
-
-        private void ReceiveMessage(TcpClient client)
-        {
-            client.Available
-        }
-
+        
         private void ReceiveMessagesFromClient(TcpClient client)
         {  
             try
@@ -132,7 +126,7 @@ namespace Server
                 {
                     byte[] messageBuffer = new byte[messageBufferSize];
 
-                    while (true) //NOT client.Connected
+                    while (client.Connected)
                     {
                         StringBuilder message = new StringBuilder();
                         int receivedBytes = 0;
@@ -146,6 +140,7 @@ namespace Server
                         AcceptClientMessage(client, message.ToString());
                     }
                 }
+                DisconnectClient(client);
             }          
             catch(InvalidOperationException) //client disconnected at the stage of getting stream
             {
@@ -179,6 +174,12 @@ namespace Server
                     client.Client.Send(Encoding.UTF8.GetBytes(message));
                 }).Start();
             }
+        }
+
+        private void DisconnectClient(TcpClient tcpClient)
+        {
+            tcpClient.Close();
+            tcpClients.Remove(tcpClient);
         }
 
         private string GetLocalIpAddress()
