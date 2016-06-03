@@ -17,32 +17,40 @@ namespace Client
             Console.WriteLine("Enter ip address");
             client.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
 
-            int messageBufferSize = 256;
+            ReceiveSendMessages(client);
 
-            new Thread(() =>
+        }
+
+        private static void ReceiveSendMessages(TcpClient client)
+        {
+            using (NetworkStream stream = client.GetStream())
             {
+                int messageBufferSize = 256;
                 byte[] messageBuffer = new byte[messageBufferSize];
+
+                new Thread(() =>
+                {
+                    while (true)
+                    {
+                        StringBuilder message = new StringBuilder();
+                        int receivedBytes = 0;
+                        do
+                        {
+                            receivedBytes = stream.Read(messageBuffer, 0, messageBufferSize);
+                            message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
+                        }
+                        while (receivedBytes == messageBufferSize);
+                    }
+
+                }).Start();
 
                 while (true)
                 {
-                    StringBuilder message = new StringBuilder();
-                    int receivedBytes = 0;
-                    do
-                    {
-                        receivedBytes = client.Client.Receive(messageBuffer);
-                        message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
-                    }
-                    while (receivedBytes == messageBufferSize);
-                    Console.WriteLine(message.ToString());
+                    string message = Console.ReadLine();
+                    stream.Write(Encoding.UTF8.GetBytes(message), 0, message.Length);
                 }
-            }).Start();
 
-
-            while (true)
-            {
-                client.Client.Send(Encoding.UTF8.GetBytes(Console.ReadLine()));
             }
-
         }
     }
 }
