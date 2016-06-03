@@ -6,10 +6,7 @@ using System.Threading.Tasks;
 
 namespace Server
 {
-    class ClientDisconnectedException : Exception
+    class Server
     {
-        public ClientDisconnectedException(string message = null) : base(message)
-        {
-        }
     }
 }

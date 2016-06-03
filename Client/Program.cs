@@ -1,56 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Client
 {
-    class Program
+    static class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Главная точка входа для приложения.
+        /// </summary>
+        [STAThread]
+        static void Main()
         {
-            TcpClient client = new TcpClient();
-            Console.WriteLine("Enter ip address");
-            client.Connect(IPAddress.Parse(Console.ReadLine()), 45000);
-
-            ReceiveSendMessages(client);
-
-        }
-
-        private static void ReceiveSendMessages(TcpClient client)
-        {
-            using (NetworkStream stream = client.GetStream())
-            {
-                int messageBufferSize = 256;
-                byte[] messageBuffer = new byte[messageBufferSize];
-
-                new Thread(() =>
-                {
-                    while (true)
-                    {
-                        StringBuilder message = new StringBuilder();
-                        int receivedBytes = 0;
-                        do
-                        {
-                            receivedBytes = stream.Read(messageBuffer, 0, messageBufferSize);
-                            message.Append(Encoding.UTF8.GetString(messageBuffer), 0, receivedBytes);
-                        }
-                        while (receivedBytes == messageBufferSize);
-                    }
-
-                }).Start();
-
-                while (true)
-                {
-                    string message = Console.ReadLine();
-                    stream.Write(Encoding.UTF8.GetBytes(message), 0, message.Length);
-                }
-
-            }
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new Form1());
         }
     }
 }
