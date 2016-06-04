@@ -28,13 +28,25 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.buttonStartStreaming = new System.Windows.Forms.Button();
             this.SuspendLayout();
+            // 
+            // buttonStartStreaming
+            // 
+            this.buttonStartStreaming.Location = new System.Drawing.Point(12, 369);
+            this.buttonStartStreaming.Name = "buttonStartStreaming";
+            this.buttonStartStreaming.Size = new System.Drawing.Size(75, 23);
+            this.buttonStartStreaming.TabIndex = 0;
+            this.buttonStartStreaming.Text = "Start";
+            this.buttonStartStreaming.UseVisualStyleBackColor = true;
+            this.buttonStartStreaming.Click += new System.EventHandler(this.buttonStartStreaming_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(284, 262);
+            this.ClientSize = new System.Drawing.Size(684, 404);
+            this.Controls.Add(this.buttonStartStreaming);
             this.Name = "MainForm";
             this.Text = "Server";
             this.ResumeLayout(false);
@@ -42,6 +54,8 @@
         }
 
         #endregion
+
+        private System.Windows.Forms.Button buttonStartStreaming;
     }
 }
 
