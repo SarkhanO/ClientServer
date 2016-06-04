@@ -17,6 +17,8 @@ namespace Server
         private FilterInfoCollection videoDevices;
         private VideoCaptureDevice videoSource;
 
+        private delegate void MyDelegate();
+
         Server server = new Server(8, 45000, 45000, "My streaming server");
 
 
@@ -40,6 +42,7 @@ namespace Server
 
             server.SendMessage(msg);
         }
+
 
         private byte[] ImageToByteArray(System.Drawing.Image imageIn)
         {
