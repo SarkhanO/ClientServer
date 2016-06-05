@@ -38,19 +38,20 @@ namespace Server
 
         private void videoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
-            byte[] msg = ImageToByteArray((Bitmap)eventArgs.Frame.Clone());
+            var frame = (Bitmap)eventArgs.Frame.Clone();
+            pictureBox.Image = frame;
+
+            byte[] msg = ImageToByteArray(frame.Clone());
 
             server.SendMessage(msg);
         }
-
-
-        private byte[] ImageToByteArray(System.Drawing.Image imageIn)
+        
+        private byte[] ImageToByteArray(object imageInObj)
         {
-            using (MemoryStream ms = new MemoryStream())
-            {
-                imageIn.Save(ms, System.Drawing.Imaging.ImageFormat.Gif);
-                return ms.ToArray();
-            }
+            var imageIn = (Bitmap)imageInObj;
+            MemoryStream ms = new MemoryStream();
+            imageIn.Save(ms, System.Drawing.Imaging.ImageFormat.Gif);
+            return ms.ToArray();
         }
     }
 }
