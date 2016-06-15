@@ -32,6 +32,7 @@ namespace Server
             //_upnpTranslator.StaticPortMappingCollection.Add(_routerPort, "TCP", _localPort, GetLocalIpAddress(), true, applicationName);
 
             tcpListener = new TcpListener(IPAddress.Any, _localPort);
+
             tcpListener.Start();
 
 
